@@ -50,12 +50,7 @@ final class ConnectClientGenerator: Generator {
         self.printLine("\(self.visibility) protocol \(protocolName): Sendable {")
         self.indent {
             for method in service.methods {
-                if self.options.generateCallbackMethods {
-                    self.printCallbackMethodInterface(for: method)
-                }
-                if self.options.generateAsyncMethods {
-                    self.printAsyncAwaitMethodInterface(for: method)
-                }
+                self.printAsyncAwaitThrowingMethodInterface(for: method)
             }
         }
         self.printLine("}")
@@ -77,107 +72,38 @@ final class ConnectClientGenerator: Generator {
             self.printLine("}")
 
             for method in service.methods {
-                if self.options.generateCallbackMethods {
-                    self.printCallbackMethodImplementation(for: method)
-                }
-                if self.options.generateAsyncMethods {
-                    self.printAsyncAwaitMethodImplementation(for: method)
-                }
-            }
-
-            if self.options.generateServiceMetadata {
-                self.printSpecs(for: service)
+                self.printAsyncAwaitThrowingMethodImplementation(for: method)
             }
         }
         self.printLine("}")
     }
 
-    private func printSpecs(for service: ServiceDescriptor) {
-        self.printLine()
-        self.printLine("\(self.visibility) enum Metadata {")
-        self.indent {
-            self.printLine("\(self.visibility) enum Methods {")
-            self.indent {
-                for method in service.methods {
-                    self.printLine(
-                        """
-                        \(self.visibility) static let \(method.name(using: self.options)) = \
-                        Connect.MethodSpec(\
-                        name: "\(method.name)", \
-                        service: "\(method.service.servicePath)", \
-                        type: \(method.specStreamType())\
-                        )
-                        """
-                    )
-                }
-            }
-            self.printLine("}")
-        }
-        self.printLine("}")
-    }
-
-    private func printCallbackMethodInterface(for method: MethodDescriptor) {
-        self.printLine()
-        self.printCommentsIfNeeded(for: method)
-        if let availabilityAnnotation = method.callbackAvailabilityAnnotation() {
-            self.printLine(availabilityAnnotation)
-        }
-        if !method.serverStreaming && !method.clientStreaming {
-            self.printLine("@discardableResult")
-        }
-
-        self.printLine(
-            method.callbackSignature(
-                using: self.namer, includeDefaults: false, options: self.options
-            )
-        )
-    }
-
-    private func printAsyncAwaitMethodInterface(for method: MethodDescriptor) {
+    private func printAsyncAwaitThrowingMethodInterface(for method: MethodDescriptor) {
         self.printLine()
         self.printCommentsIfNeeded(for: method)
         self.printLine(method.asyncAwaitAvailabilityAnnotation())
         self.printLine(
-            method.asyncAwaitSignature(
-                using: self.namer, includeDefaults: false, options: self.options
+            method.asyncAwaitThrowingSignature(
+                using: self.namer,
+                options: self.options,
+                includeDefaults: false
             )
         )
     }
-
-    private func printCallbackMethodImplementation(for method: MethodDescriptor) {
-        self.printLine()
-        if let availabilityAnnotation = method.callbackAvailabilityAnnotation() {
-            self.printLine(availabilityAnnotation)
-        }
-        if !method.serverStreaming && !method.clientStreaming {
-            self.printLine("@discardableResult")
-        }
-
-        self.printLine(
-            "\(self.visibility) "
-            + method.callbackSignature(
-                using: self.namer, includeDefaults: true, options: self.options
-            )
-            + " {"
-        )
-        self.indent {
-            self.printLine("return \(method.callbackReturnValue())")
-        }
-        self.printLine("}")
-    }
-
-    private func printAsyncAwaitMethodImplementation(for method: MethodDescriptor) {
+    private func printAsyncAwaitThrowingMethodImplementation(for method: MethodDescriptor) {
         self.printLine()
         self.printLine(method.asyncAwaitAvailabilityAnnotation())
         self.printLine(
             "\(self.visibility) "
-            + method.asyncAwaitSignature(
-                using: self.namer, includeDefaults: true, options: self.options
+            + method.asyncAwaitThrowingSignature(
+                using: self.namer,
+                options: self.options,
+                includeDefaults: true
             )
             + " {"
         )
         self.indent {
-            self.printLine("return \(method.asyncAwaitReturnValue())")
+            self.printLine("\(method.asyncAwaitThrowingReturnValue(using: self.namer))")
         }
         self.printLine("}")
     }
@@ -231,54 +157,52 @@ private extension MethodDescriptor {
         }
     }
 
-    func callbackReturnValue() -> String {
+    func asyncAwaitThrowingReturnValue(
+        using namer: SwiftProtobufNamer
+    ) -> String {
+        let returnType = returnValue(using: namer)
+        let inputName = namer.fullName(message: self.inputType)
+        let outputName = namer.fullName(message: self.outputType)
         if self.clientStreaming && self.serverStreaming {
             return """
-            self.client.bidirectionalStream(\
-            path: "\(self.methodPath)", headers: headers, onResult: onResult)
+            let stream: \(returnType) = self.client.bidirectionalStream(path: "\(self.methodPath)", headers: [:])
+            var request = \(inputName)()
+            populator?(&request)
+            try stream.send(request)
+            return stream
             """
         } else if self.serverStreaming {
             return """
-            self.client.serverOnlyStream(\
-            path: "\(self.methodPath)", headers: headers, onResult: onResult)
+            let stream: \(returnType) = self.client.serverOnlyStream(path: "\(self.methodPath)", headers: [:])
+            var request = \(inputName)()
+            populator?(&request)
+            try stream.send(request)
+            return stream
             """
         } else if self.clientStreaming {
             return """
-            self.client.clientOnlyStream(\
-            path: "\(self.methodPath)", headers: headers, onResult: onResult)
+            let stream: \(returnType) = self.client.clientOnlyStream(path: "\(self.methodPath)", headers: [:])
+            var request = \(inputName)()
+            populator?(&request)
+            try stream.send(request)
+            return stream
             """
         } else {
             return """
-            self.client.unary(\
-            path: "\(self.methodPath)", \
-            idempotencyLevel: .\(self.idempotencyLevel()), \
-            request: request, \
-            headers: headers, \
-            completion: completion)
-            """
-        }
-    }
-
-    func asyncAwaitReturnValue() -> String {
-        if self.clientStreaming && self.serverStreaming {
-            return """
-            self.client.bidirectionalStream(path: "\(self.methodPath)", headers: headers)
-            """
-        } else if self.serverStreaming {
-            return """
-            self.client.serverOnlyStream(path: "\(self.methodPath)", headers: headers)
-            """
-        } else if self.clientStreaming {
-            return """
-            self.client.clientOnlyStream(path: "\(self.methodPath)", headers: headers)
-            """
-        } else {
-            return """
+            var request = \(inputName)()
+            populator?(&request)
+            let responseMessage: ResponseMessage<\(outputName)> = 
             await self.client.unary(\
             path: "\(self.methodPath)", \
             idempotencyLevel: .\(self.idempotencyLevel()), \
             request: request, \
-            headers: headers)
+            headers: [:])
+            switch responseMessage.result {
+            case .success(let successData):
+                return successData
+            case .failure(let error):
+                throw error
+            }
             """
         }
     }
