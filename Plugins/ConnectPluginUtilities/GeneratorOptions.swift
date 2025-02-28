@@ -18,9 +18,6 @@ import SwiftProtobufPluginLibrary
 private enum CommandLineParameter: String {
     case extraModuleImports = "ExtraModuleImports"
     case fileNaming = "FileNaming"
-    case generateAsyncMethods = "GenerateAsyncMethods"
-    case generateCallbackMethods = "GenerateCallbackMethods"
-    case generateServiceMetadata = "GenerateServiceMetadata"
     case keepMethodCasing = "KeepMethodCasing"
     case protoPathModuleMappings = "ProtoPathModuleMappings"
     case swiftProtobufModuleName = "SwiftProtobufModuleName"
@@ -48,9 +45,6 @@ private enum CommandLineParameter: String {
 public struct GeneratorOptions {
     public private(set) var extraModuleImports = [String]()
     public private(set) var fileNaming = FileNaming.fullPath
-    public private(set) var generateAsyncMethods = true
-    public private(set) var generateCallbackMethods = false
-    public private(set) var generateServiceMetadata = true
     public private(set) var keepMethodCasing = false
     public private(set) var protoToModuleMappings = ProtoFileToModuleMappings()
     public private(set) var swiftProtobufModuleName = "SwiftProtobuf"
@@ -92,24 +86,6 @@ extension GeneratorOptions {
             case .fileNaming:
                 if let value = FileNaming(rawValue: rawValue) {
                     self.fileNaming = value
-                    continue
-                }
-
-            case .generateAsyncMethods:
-                if let value = Bool(rawValue) {
-                    self.generateAsyncMethods = value
-                    continue
-                }
-
-            case .generateCallbackMethods:
-                if let value = Bool(rawValue) {
-                    self.generateCallbackMethods = value
-                    continue
-                }
-
-            case .generateServiceMetadata:
-                if let value = Bool(rawValue) {
-                    self.generateServiceMetadata = value
                     continue
                 }
 

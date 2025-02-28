@@ -25,77 +25,57 @@ extension MethodDescriptor {
         : NamingUtils.toLowerCamelCase(self.name)
     }
 
-    public func callbackSignature(
-        using namer: SwiftProtobufNamer, includeDefaults: Bool, options: GeneratorOptions
+    public func asyncAwaitThrowingSignature(
+        using namer: SwiftProtobufNamer,
+        options: GeneratorOptions,
+        includeDefaults: Bool
     ) -> String {
         let methodName = self.name(using: options)
         let inputName = namer.fullName(message: self.inputType)
-        let outputName = namer.fullName(message: self.outputType)
 
         // Note that the method name is escaped to avoid using Swift keywords.
         if self.clientStreaming && self.serverStreaming {
             return """
             func `\(methodName)`\
-            (headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
-            onResult: @escaping @Sendable (Connect.StreamResult<\(outputName)>) -> Void) \
-            -> any Connect.BidirectionalStreamInterface<\(inputName)>
+            (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
+            throws -> \(returnValue(using: namer))
             """
         } else if self.serverStreaming {
             return """
             func `\(methodName)`\
-            (headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
-            onResult: @escaping @Sendable (Connect.StreamResult<\(outputName)>) -> Void) \
-            -> any Connect.ServerOnlyStreamInterface<\(inputName)>
+            (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
+            throws -> \(returnValue(using: namer))
             """
         } else if self.clientStreaming {
             return """
             func `\(methodName)`\
-            (headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
-            onResult: @escaping @Sendable (Connect.StreamResult<\(outputName)>) -> Void) \
-            -> any Connect.ClientOnlyStreamInterface<\(inputName)>
+            (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
+            throws -> \(returnValue(using: namer))
             """
         } else {
             return """
             func `\(methodName)`\
-            (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
-            completion: @escaping @Sendable (ResponseMessage<\(outputName)>) -> Void) \
-            -> Connect.Cancelable
+            (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
+            async throws -> \(returnValue(using: namer))
             """
         }
     }
-
-    public func asyncAwaitSignature(
-        using namer: SwiftProtobufNamer, includeDefaults: Bool, options: GeneratorOptions
+    
+    public func returnValue(
+        using namer: SwiftProtobufNamer
     ) -> String {
-        let methodName = self.name(using: options)
         let inputName = namer.fullName(message: self.inputType)
         let outputName = namer.fullName(message: self.outputType)
 
         // Note that the method name is escaped to avoid using Swift keywords.
         if self.clientStreaming && self.serverStreaming {
-            return """
-            func `\(methodName)`\
-            (headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
-            -> any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)>
-            """
+            return "any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)>"
         } else if self.serverStreaming {
-            return """
-            func `\(methodName)`\
-            (headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
-            -> any Connect.ServerOnlyAsyncStreamInterface<\(inputName), \(outputName)>
-            """
+            return "any Connect.ServerOnlyAsyncStreamInterface<\(inputName), \(outputName)>"
         } else if self.clientStreaming {
-            return """
-            func `\(methodName)`\
-            (headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
-            -> any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)>
-            """
+            return "any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)>"
         } else {
-            return """
-            func `\(methodName)`\
-            (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
-            async -> ResponseMessage<\(outputName)>
-            """
+            return "\(outputName)"
         }
     }
 }

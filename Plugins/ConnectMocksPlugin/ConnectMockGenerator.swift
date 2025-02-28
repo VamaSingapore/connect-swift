@@ -41,11 +41,7 @@ final class ConnectMockGenerator: Generator {
             self.typeVisibility = "package"
         }
 
-        if self.options.generateCallbackMethods {
-            self.printModuleImports(adding: ["Combine", "ConnectMocks"])
-        } else {
-            self.printModuleImports(adding: ["ConnectMocks"])
-        }
+        self.printModuleImports(adding: ["ConnectMocks"])
 
         for service in self.services {
             self.printLine()
@@ -72,97 +68,41 @@ final class ConnectMockGenerator: Generator {
             """
         )
         self.indent {
-            if self.options.generateCallbackMethods {
-                self.printLine("private var cancellables = [Combine.AnyCancellable]()")
-                self.printLine()
-            }
 
             for method in service.methods {
-                if self.options.generateCallbackMethods {
-                    self.printLine(
-                        "/// Mocked for calls to `\(method.name(using: self.options))()`."
-                    )
-                    self.printLine(
-                        """
-                        \(self.propertyVisibility) var \(method.callbackMockPropertyName()) = \
-                        \(method.callbackMockPropertyValue(using: self.namer))
-                        """
-                    )
-                }
-                if self.options.generateAsyncMethods {
-                    self.printLine(
-                        "/// Mocked for async calls to `\(method.name(using: self.options))()`."
-                    )
-                    self.printLine(
-                        """
-                        \(self.propertyVisibility) var \(method.asyncAwaitMockPropertyName()) = \
-                        \(method.asyncAwaitMockPropertyValue(using: self.namer))
-                        """
-                    )
-                }
+                self.printLine(
+                    "/// Mocked for async calls to `\(method.name(using: self.options))()`."
+                )
+                self.printLine(
+                    """
+                    \(self.propertyVisibility) var \(method.asyncAwaitMockPropertyName()) = \
+                    \(method.asyncAwaitMockPropertyValue(using: self.namer))
+                    """
+                )
             }
 
             self.printLine()
             self.printLine("\(self.propertyVisibility) init() {}")
 
             for method in service.methods {
-                if self.options.generateCallbackMethods {
-                    self.printCallbackMethodMockImplementation(for: method)
-                }
-                if self.options.generateAsyncMethods {
-                    self.printAsyncAwaitMethodMockImplementation(for: method)
-                }
+                self.printAsyncAwaitThrowingMethodMockImplementation(for: method)
             }
         }
 
         self.printLine("}")
     }
 
-    private func printCallbackMethodMockImplementation(for method: MethodDescriptor) {
-        self.printLine()
-        if let availabilityAnnotation = method.callbackAvailabilityAnnotation() {
-            self.printLine(availabilityAnnotation)
-        }
-        if !method.serverStreaming && !method.clientStreaming {
-            self.printLine("@discardableResult")
-        }
-
-        self.printLine(
-            "\(self.typeVisibility) "
-            + method.callbackSignature(
-                using: self.namer, includeDefaults: true, options: self.options
-            )
-            + " {"
-        )
-        self.indent {
-            let mockProperty = method.callbackMockPropertyName()
-            if method.clientStreaming || method.serverStreaming {
-                self.printLine(
-                    """
-                    self.\(mockProperty).$inputs\
-                    .first { !$0.isEmpty }\
-                    .sink { _ in self.\(mockProperty).outputs.forEach(onResult) }\
-                    .store(in: &self.cancellables)
-                    """
-                )
-                self.printLine("return self.\(mockProperty)")
-            } else {
-                self.printLine("completion(self.\(mockProperty)(request))")
-                self.printLine("return Connect.Cancelable {}")
-            }
-        }
-        self.printLine("}")
-    }
-
-    private func printAsyncAwaitMethodMockImplementation(for method: MethodDescriptor) {
+    private func printAsyncAwaitThrowingMethodMockImplementation(for method: MethodDescriptor) {
         self.printLine()
         if let availabilityAnnotation = method.asyncAwaitAvailabilityAnnotation() {
             self.printLine(availabilityAnnotation)
         }
         self.printLine(
             "\(self.typeVisibility) "
-            + method.asyncAwaitSignature(
-                using: self.namer, includeDefaults: true, options: self.options
+            + method.asyncAwaitThrowingSignature(
+                using: self.namer,
+                options: self.options,
+                includeDefaults: true
             )
             + " {"
         )
