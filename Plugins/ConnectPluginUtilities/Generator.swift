@@ -122,11 +122,6 @@ extension Generator: SwiftProtobufPluginLibrary.CodeGenerator {
         generatorOutputs: any SwiftProtobufPluginLibrary.GeneratorOutputs
     ) throws {
         self.options = try GeneratorOptions(commandLineParameters: parameter)
-        guard self.options.generateAsyncMethods || self.options.generateCallbackMethods else {
-            throw GeneratorError(
-                message: "Either async methods or callback methods must be enabled"
-            )
-        }
 
         for descriptor in files where !descriptor.services.isEmpty {
             try generatorOutputs.add(
