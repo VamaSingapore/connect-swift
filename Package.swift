@@ -60,8 +60,8 @@ let package = Package(
             from: "2.29.3"
         ),
         .package(
-            url: "https://github.com/apple/swift-protobuf.git",
-            from: "1.28.2"
+            url: "https://github.com/VamaSingapore/swift-protobuf.git",
+            branch: "vama"
         ),
     ],
     targets: [
