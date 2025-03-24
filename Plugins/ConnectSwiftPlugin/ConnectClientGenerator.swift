@@ -28,6 +28,8 @@ final class ConnectClientGenerator: Generator {
     override func printContent(for descriptor: FileDescriptor) {
         super.printContent(for: descriptor)
 
+        self.printLine("// swiftlint:disable all")
+
         switch self.options.visibility {
         case .internal:
             self.visibility = "internal"
@@ -41,6 +43,8 @@ final class ConnectClientGenerator: Generator {
             self.printLine()
             self.printService(service)
         }
+
+        self.printLine("// swiftlint:enable all")
     }
 
     private func printService(_ service: ServiceDescriptor) {
