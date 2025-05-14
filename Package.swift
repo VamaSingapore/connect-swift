@@ -61,7 +61,7 @@ let package = Package(
         ),
         .package(
             url: "https://github.com/VamaSingapore/swift-protobuf.git",
-            branch: "vama"
+            branch: "support-optionals"
         ),
     ],
     targets: [

@@ -50,8 +50,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/VamaSingapore/swift-protobuf.git",
       "state" : {
-        "branch" : "vama",
-        "revision" : "230513c45630e8aba681638599c41ebf1b73484e"
+        "branch" : "support-optionals",
+        "revision" : "cebad537f2ad96dd38a41c3fbb69b6bb93eece81"
       }
     },
     {
