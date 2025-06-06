@@ -164,12 +164,11 @@ private extension MethodDescriptor {
     func asyncAwaitThrowingReturnValue(
         using namer: SwiftProtobufNamer
     ) -> String {
-        let returnType = returnValue(using: namer)
         let inputName = namer.fullName(message: self.inputType)
         let outputName = namer.fullName(message: self.outputType)
         if self.clientStreaming && self.serverStreaming {
             return """
-            let stream: \(returnType) = self.client.bidirectionalStream(path: "\(self.methodPath)", headers: [:])
+            let stream: any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)> = self.client.bidirectionalStream(path: "\(self.methodPath)", headers: [:])
             var request = \(inputName)()
             populator?(&request)
             try stream.send(request)
@@ -195,7 +194,7 @@ private extension MethodDescriptor {
             """
         } else if self.serverStreaming {
             return """
-            let stream: \(returnType) = self.client.serverOnlyStream(path: "\(self.methodPath)", headers: [:])
+            let stream: any Connect.ServerOnlyAsyncStreamInterface<\(inputName), \(outputName)> = self.client.serverOnlyStream(path: "\(self.methodPath)", headers: [:])
             var request = \(inputName)()
             populator?(&request)
             try stream.send(request)
@@ -221,7 +220,7 @@ private extension MethodDescriptor {
             """
         } else if self.clientStreaming {
             return """
-            let stream: \(returnType) = self.client.clientOnlyStream(path: "\(self.methodPath)", headers: [:])
+            let stream: any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)> = self.client.clientOnlyStream(path: "\(self.methodPath)", headers: [:])
             var request = \(inputName)()
             populator?(&request)
             try stream.send(request)
