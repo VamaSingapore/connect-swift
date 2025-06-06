@@ -175,7 +175,25 @@ private extension MethodDescriptor {
             var request = \(inputName)()
             populator?(&request)
             try stream.send(request)
-            return stream
+            let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
+                Task {
+                    for await result in stream.results() {
+                        switch result {
+                        case .message(let message):
+                            continuation.yield(message)
+                        case .headers:
+                            break
+                        case let .complete(_, error, _):
+                            if let error {
+                                continuation.finish(throwing: error)
+                            } else {
+                                continuation.finish()
+                            }
+                        }
+                    }
+                }
+            }
+            return asyncStream
             """
         } else if self.serverStreaming {
             return """
@@ -183,7 +201,25 @@ private extension MethodDescriptor {
             var request = \(inputName)()
             populator?(&request)
             try stream.send(request)
-            return stream
+            let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
+                Task {
+                    for await result in stream.results() {
+                        switch result {
+                        case .message(let message):
+                            continuation.yield(message)
+                        case .headers:
+                            break
+                        case let .complete(_, error, _):
+                            if let error {
+                                continuation.finish(throwing: error)
+                            } else {
+                                continuation.finish()
+                            }
+                        }
+                    }
+                }
+            }
+            return asyncStream
             """
         } else if self.clientStreaming {
             return """
@@ -191,7 +227,25 @@ private extension MethodDescriptor {
             var request = \(inputName)()
             populator?(&request)
             try stream.send(request)
-            return stream
+            let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
+                Task {
+                    for await result in stream.results() {
+                        switch result {
+                        case .message(let message):
+                            continuation.yield(message)
+                        case .headers:
+                            break
+                        case let .complete(_, error, _):
+                            if let error {
+                                continuation.finish(throwing: error)
+                            } else {
+                                continuation.finish()
+                            }
+                        }
+                    }
+                }
+            }
+            return asyncStream
             """
         } else {
             return """
