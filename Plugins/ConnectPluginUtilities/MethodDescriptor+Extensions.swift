@@ -64,16 +64,15 @@ extension MethodDescriptor {
     public func returnValue(
         using namer: SwiftProtobufNamer
     ) -> String {
-        let inputName = namer.fullName(message: self.inputType)
         let outputName = namer.fullName(message: self.outputType)
 
         // Note that the method name is escaped to avoid using Swift keywords.
         if self.clientStreaming && self.serverStreaming {
-            return "any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)>"
+            return "AsyncThrowingStream<\(outputName), Error>"
         } else if self.serverStreaming {
-            return "any Connect.ServerOnlyAsyncStreamInterface<\(inputName), \(outputName)>"
+            return "AsyncThrowingStream<\(outputName), Error>"
         } else if self.clientStreaming {
-            return "any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)>"
+            return "AsyncThrowingStream<\(outputName), Error>"
         } else {
             return "\(outputName)"
         }
