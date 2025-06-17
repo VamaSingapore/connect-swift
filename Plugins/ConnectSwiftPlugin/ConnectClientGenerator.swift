@@ -175,6 +175,9 @@ private extension MethodDescriptor {
             populator?(&request)
             try stream.send(request)
             let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
+                continuation.onTermination = { _ in
+                    stream.cancel()
+                }
                 Task {
                     for await result in stream.results() {
                         switch result {
@@ -201,6 +204,9 @@ private extension MethodDescriptor {
             populator?(&request)
             try stream.send(request)
             let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
+                continuation.onTermination = { _ in
+                    stream.cancel()
+                }
                 Task {
                     for await result in stream.results() {
                         switch result {
@@ -227,6 +233,9 @@ private extension MethodDescriptor {
             populator?(&request)
             try stream.send(request)
             let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
+                continuation.onTermination = { _ in
+                    stream.cancel()
+                }
                 Task {
                     for await result in stream.results() {
                         switch result {
