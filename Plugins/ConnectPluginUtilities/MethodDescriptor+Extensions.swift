@@ -55,12 +55,21 @@ extension MethodDescriptor {
             -> any Connect.ClientOnlyStreamInterface<\(inputName)>
             """
         } else {
-            return """
-            func `\(methodName)`\
-            (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
-            completion: @escaping @Sendable (ResponseMessage<\(outputName)>) -> Void) \
-            -> Connect.Cancelable
-            """
+            if options.useRequestBuilder {
+                return """
+                func `\(methodName)`\
+                (_ requestBuilder: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : ""), headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
+                completion: @escaping @Sendable (ResponseMessage<\(outputName)>) -> Void) \
+                -> Connect.Cancelable
+                """
+            } else {
+                return """
+                func `\(methodName)`\
+                (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : ""), \
+                completion: @escaping @Sendable (ResponseMessage<\(outputName)>) -> Void) \
+                -> Connect.Cancelable
+                """
+            }
         }
     }
 
@@ -91,11 +100,62 @@ extension MethodDescriptor {
             -> any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)>
             """
         } else {
+            if options.useRequestBuilder {
+                return """
+                func `\(methodName)`\
+                (_ requestBuilder: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : ""), headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+                async -> ResponseMessage<\(outputName)>
+                """
+            } else {
+                return """
+                func `\(methodName)`\
+                (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+                async -> ResponseMessage<\(outputName)>
+                """
+            }
+        }
+    }
+
+    public func asyncAwaitThrowingSignature(
+        using namer: SwiftProtobufNamer, includeDefaults: Bool, options: GeneratorOptions
+    ) -> String {
+        let methodName = self.name(using: options)
+        let inputName = namer.fullName(message: self.inputType)
+        let outputName = namer.fullName(message: self.outputType)
+
+        // Note that the method name is escaped to avoid using Swift keywords.
+        if self.clientStreaming && self.serverStreaming {
             return """
             func `\(methodName)`\
-            (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
-            async -> ResponseMessage<\(outputName)>
+            (headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+            -> any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)>
             """
+        } else if self.serverStreaming {
+            return """
+            func `\(methodName)`\
+            (headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+            -> any Connect.ServerOnlyAsyncStreamInterface<\(inputName), \(outputName)>
+            """
+        } else if self.clientStreaming {
+            return """
+            func `\(methodName)`\
+            (headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+            -> any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)>
+            """
+        } else {
+            if options.useRequestBuilder {
+                return """
+                func `\(methodName)`\
+                (_ requestBuilder: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : ""), headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+                async throws -> \(outputName)
+                """
+            } else {
+                return """
+                func `\(methodName)`\
+                (request: \(inputName), headers: Connect.Headers\(includeDefaults ? " = [:]" : "")) \
+                async throws -> \(outputName)
+                """
+            }
         }
     }
 }
