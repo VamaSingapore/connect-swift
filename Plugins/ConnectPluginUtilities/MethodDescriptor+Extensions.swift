@@ -38,32 +38,34 @@ extension MethodDescriptor {
             return """
             func `\(methodName)`\
             (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
-            throws -> \(returnValue(using: namer))
+            throws -> \(returnValue(using: namer, includeDefaults: includeDefaults, options: options))
             """
         } else if self.serverStreaming {
             return """
             func `\(methodName)`\
             (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
-            throws -> \(returnValue(using: namer))
+            throws -> \(returnValue(using: namer, includeDefaults: includeDefaults, options: options))
             """
         } else if self.clientStreaming {
             return """
             func `\(methodName)`\
-            (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
-            throws -> \(returnValue(using: namer))
+            () \
+            throws -> \(returnValue(using: namer, includeDefaults: includeDefaults, options: options))
             """
         } else {
             return """
             func `\(methodName)`\
             (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
-            async throws -> \(returnValue(using: namer))
+            async throws -> \(returnValue(using: namer, includeDefaults: includeDefaults, options: options))
             """
         }
     }
     
     public func returnValue(
-        using namer: SwiftProtobufNamer
+        using namer: SwiftProtobufNamer, includeDefaults: Bool, options: GeneratorOptions
     ) -> String {
+        let methodName = self.name(using: options)
+        let inputName = namer.fullName(message: self.inputType)
         let outputName = namer.fullName(message: self.outputType)
 
         // Note that the method name is escaped to avoid using Swift keywords.
@@ -72,7 +74,7 @@ extension MethodDescriptor {
         } else if self.serverStreaming {
             return "AsyncThrowingStream<\(outputName), Error>"
         } else if self.clientStreaming {
-            return "AsyncThrowingStream<\(outputName), Error>"
+            return "any Connect.ClientOnlyAsyncStreamInterface<\(inputName), \(outputName)>"
         } else {
             return "\(outputName)"
         }
