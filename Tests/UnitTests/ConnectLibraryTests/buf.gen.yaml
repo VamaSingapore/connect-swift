@@ -6,6 +6,7 @@ plugins:
   - name: connect-swift
     opt:
       - GenerateAsyncMethods=true
+      - GenerateAsyncThrowingMethods=false
       - GenerateCallbackMethods=true
       - Visibility=Internal
     out: ./GeneratedSources
@@ -13,6 +14,7 @@ plugins:
   - name: connect-swift-mocks
     opt:
       - GenerateAsyncMethods=true
+      - GenerateAsyncThrowingMethods=false
       - GenerateCallbackMethods=true
       - Visibility=Internal
     out: ./GeneratedSources

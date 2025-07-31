@@ -58,6 +58,9 @@ final class ConnectClientGenerator: Generator {
                 if self.options.generateAsyncMethods {
                     self.printAsyncAwaitMethodInterface(for: method)
                 }
+                if self.options.generateAsyncThrowingMethods {
+                    self.printAsyncAwaitThrowingMethodInterface(for: method)
+                }
             }
         }
         self.printLine("}")
@@ -84,6 +87,9 @@ final class ConnectClientGenerator: Generator {
                 }
                 if self.options.generateAsyncMethods {
                     self.printAsyncAwaitMethodImplementation(for: method)
+                }
+                if self.options.generateAsyncThrowingMethods {
+                    self.printAsyncAwaitThrowingMethodImplementation(for: method)
                 }
             }
 
@@ -146,6 +152,17 @@ final class ConnectClientGenerator: Generator {
         )
     }
 
+    private func printAsyncAwaitThrowingMethodInterface(for method: MethodDescriptor) {
+        self.printLine()
+        self.printCommentsIfNeeded(for: method)
+        self.printLine(method.asyncAwaitThrowingAvailabilityAnnotation())
+        self.printLine(
+            method.asyncAwaitThrowingSignature(
+                using: self.namer, includeDefaults: false, options: self.options
+            )
+        )
+    }
+
     private func printCallbackMethodImplementation(for method: MethodDescriptor) {
         self.printLine()
         if let availabilityAnnotation = method.callbackAvailabilityAnnotation() {
@@ -163,7 +180,10 @@ final class ConnectClientGenerator: Generator {
             + " {"
         )
         self.indent {
-            self.printLine("return \(method.callbackReturnValue())")
+            if self.options.useRequestBuilder, !method.serverStreaming, !method.clientStreaming {
+                self.printLine(method.requestBuilderValue(using: self.namer))
+            }
+            self.printLine("\(method.callbackReturnValue())")
         }
         self.printLine("}")
     }
@@ -179,7 +199,29 @@ final class ConnectClientGenerator: Generator {
             + " {"
         )
         self.indent {
-            self.printLine("return \(method.asyncAwaitReturnValue())")
+            if self.options.useRequestBuilder, !method.serverStreaming, !method.clientStreaming {
+                self.printLine(method.requestBuilderValue(using: self.namer))
+            }
+            self.printLine("\(method.asyncAwaitReturnValue())")
+        }
+        self.printLine("}")
+    }
+
+    private func printAsyncAwaitThrowingMethodImplementation(for method: MethodDescriptor) {
+        self.printLine()
+        self.printLine(method.asyncAwaitThrowingAvailabilityAnnotation())
+        self.printLine(
+            "\(self.visibility) "
+            + method.asyncAwaitThrowingSignature(
+                using: self.namer, includeDefaults: true, options: self.options
+            )
+            + " {"
+        )
+        self.indent {
+            if self.options.useRequestBuilder, !method.serverStreaming, !method.clientStreaming {
+                self.printLine(method.requestBuilderValue(using: self.namer))
+            }
+            self.printLine("\(method.asyncAwaitThrowingReturnValue(using: self.namer))")
         }
         self.printLine("}")
     }
@@ -233,6 +275,25 @@ private extension MethodDescriptor {
         }
     }
 
+    func asyncAwaitThrowingAvailabilityAnnotation() -> String {
+        if self.options.deprecated {
+            // swiftlint:disable:next line_length
+            return "@available(iOS, introduced: 13, deprecated: 13, message: \"This RPC has been marked as deprecated in its `.proto` file.\")"
+        } else {
+            return "@available(iOS 13, *)"
+        }
+    }
+
+    func requestBuilderValue(
+        using namer: SwiftProtobufNamer
+    ) -> String {
+        let inputName = namer.fullName(message: self.inputType)
+        return """
+        var request = \(inputName)()
+        requestBuilder?(&request)    
+        """
+    }
+
     func callbackReturnValue() -> String {
         if self.clientStreaming && self.serverStreaming {
             return """
@@ -251,7 +312,7 @@ private extension MethodDescriptor {
             """
         } else {
             return """
-            self.client.unary(\
+            return self.client.unary(\
             path: "\(self.methodPath)", \
             idempotencyLevel: .\(self.idempotencyLevel()), \
             request: request, \
@@ -276,11 +337,45 @@ private extension MethodDescriptor {
             """
         } else {
             return """
-            await self.client.unary(\
+            return await self.client.unary(\
             path: "\(self.methodPath)", \
             idempotencyLevel: .\(self.idempotencyLevel()), \
             request: request, \
             headers: headers)
+            """
+        }
+    }
+
+    func asyncAwaitThrowingReturnValue(
+        using namer: SwiftProtobufNamer
+    ) -> String {
+        if self.clientStreaming && self.serverStreaming {
+            return """
+            self.client.bidirectionalStream(path: "\(self.methodPath)", headers: headers)
+            """
+        } else if self.serverStreaming {
+            return """
+            self.client.serverOnlyStream(path: "\(self.methodPath)", headers: headers)
+            """
+        } else if self.clientStreaming {
+            return """
+            self.client.clientOnlyStream(path: "\(self.methodPath)", headers: headers)
+            """
+        } else {
+            let outputName = namer.fullName(message: self.outputType)
+            return """
+            let responseMessage: ResponseMessage<\(outputName)> = 
+            await self.client.unary(\
+            path: "\(self.methodPath)", \
+            idempotencyLevel: .\(self.idempotencyLevel()), \
+            request: request, \
+            headers: [:])
+            switch responseMessage.result {
+            case .success(let successData):
+                return successData
+            case .failure(let error):
+                throw error
+            }
             """
         }
     }

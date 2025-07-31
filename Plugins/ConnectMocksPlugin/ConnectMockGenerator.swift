@@ -251,4 +251,13 @@ private extension MethodDescriptor {
             return nil
         }
     }
+
+    func asyncAwaitThrowingAvailabilityAnnotation() -> String? {
+        if self.options.deprecated {
+            // swiftlint:disable:next line_length
+            return "@available(iOS, introduced: 13, deprecated: 13, message: \"This RPC has been marked as deprecated in its `.proto` file.\")"
+        } else {
+            return nil
+        }
+    }
 }
