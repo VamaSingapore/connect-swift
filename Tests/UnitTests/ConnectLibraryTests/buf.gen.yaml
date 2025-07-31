@@ -5,14 +5,16 @@ plugins:
     out: ./GeneratedSources
   - name: connect-swift
     opt:
-      - GenerateAsyncMethods=true
+      - GenerateAsyncMethods=false
+      - GenerateAsyncThrowingMethods=true
       - GenerateCallbackMethods=true
       - Visibility=Internal
     out: ./GeneratedSources
     path: ../../../.tmp/bin/protoc-gen-connect-swift
   - name: connect-swift-mocks
     opt:
-      - GenerateAsyncMethods=true
+      - GenerateAsyncMethods=false
+      - GenerateAsyncThrowingMethods=true
       - GenerateCallbackMethods=true
       - Visibility=Internal
     out: ./GeneratedSources

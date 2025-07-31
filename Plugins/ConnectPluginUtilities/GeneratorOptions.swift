@@ -19,8 +19,10 @@ private enum CommandLineParameter: String {
     case extraModuleImports = "ExtraModuleImports"
     case fileNaming = "FileNaming"
     case generateAsyncMethods = "GenerateAsyncMethods"
+    case generateAsyncThrowingMethods = "GenerateAsyncThrowingMethods"
     case generateCallbackMethods = "GenerateCallbackMethods"
     case generateServiceMetadata = "GenerateServiceMetadata"
+    case useRequestBuilder = "UseRequestBuilder"
     case keepMethodCasing = "KeepMethodCasing"
     case protoPathModuleMappings = "ProtoPathModuleMappings"
     case swiftProtobufModuleName = "SwiftProtobufModuleName"
@@ -48,9 +50,11 @@ private enum CommandLineParameter: String {
 public struct GeneratorOptions {
     public private(set) var extraModuleImports = [String]()
     public private(set) var fileNaming = FileNaming.fullPath
-    public private(set) var generateAsyncMethods = true
+    public private(set) var generateAsyncMethods = false
+    public private(set) var generateAsyncThrowingMethods = true
     public private(set) var generateCallbackMethods = false
-    public private(set) var generateServiceMetadata = true
+    public private(set) var generateServiceMetadata = false
+    public private(set) var useRequestBuilder = true
     public private(set) var keepMethodCasing = false
     public private(set) var protoToModuleMappings = ProtoFileToModuleMappings()
     public private(set) var swiftProtobufModuleName = "SwiftProtobuf"
@@ -101,6 +105,12 @@ extension GeneratorOptions {
                     continue
                 }
 
+            case .generateAsyncThrowingMethods:
+                if let value = Bool(rawValue) {
+                    self.generateAsyncThrowingMethods = value
+                    continue
+                }
+
             case .generateCallbackMethods:
                 if let value = Bool(rawValue) {
                     self.generateCallbackMethods = value
@@ -110,6 +120,12 @@ extension GeneratorOptions {
             case .generateServiceMetadata:
                 if let value = Bool(rawValue) {
                     self.generateServiceMetadata = value
+                    continue
+                }
+
+            case .useRequestBuilder:
+                if let value = Bool(rawValue) {
+                    self.useRequestBuilder = value
                     continue
                 }
 

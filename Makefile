@@ -18,6 +18,10 @@ LICENSE_IGNORE := -e Package.swift \
     -e Libraries/Connect/Internal/GeneratedSources\/ \
     -e Tests/ConformanceClient/GeneratedSources\/ \
     -e Tests/UnitTests/ConnectLibraryTests/GeneratedSources\/
+VAMA_PATH := ~/Projects/vama/VRPCNetworking/generator-services
+
+.PHONY: all
+all: buildgenerator ## Default target
 
 .PHONY: buildpackage
 buildpackage: ## Build all targets in the Swift package
@@ -31,6 +35,12 @@ buildplugins: ## Build all plugin binaries
 	swift build -c release --product protoc-gen-connect-swift-mocks
 	mv ./.build/release/protoc-gen-connect-swift-mocks $(BIN)
 	@echo "Success! Plugins are available in $(BIN)"
+
+.PHONY: buildgenerator
+buildgenerator: ## Build plugin binary
+	swift build -c release --product protoc-gen-connect-swift
+	mv ./.build/release/protoc-gen-connect-swift $(VAMA_PATH)
+	@echo "Success! Plugins are available in $(VAMA_PATH)"
 
 .PHONY: clean
 clean: cleangenerated ## Delete all plugins and generated outputs
