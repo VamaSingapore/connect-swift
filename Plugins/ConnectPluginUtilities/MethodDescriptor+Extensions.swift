@@ -37,7 +37,7 @@ extension MethodDescriptor {
         if self.clientStreaming && self.serverStreaming {
             return """
             func `\(methodName)`\
-            (_ populator: ((inout \(inputName)) -> Void)?\(includeDefaults ? " = nil" : "")) \
+            () \
             throws -> \(returnValue(using: namer, includeDefaults: includeDefaults, options: options))
             """
         } else if self.serverStreaming {
@@ -70,7 +70,7 @@ extension MethodDescriptor {
 
         // Note that the method name is escaped to avoid using Swift keywords.
         if self.clientStreaming && self.serverStreaming {
-            return "AsyncThrowingStream<\(outputName), Error>"
+            return "any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)>"
         } else if self.serverStreaming {
             return "AsyncThrowingStream<\(outputName), Error>"
         } else if self.clientStreaming {

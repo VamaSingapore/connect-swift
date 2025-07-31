@@ -171,31 +171,7 @@ private extension MethodDescriptor {
         if self.clientStreaming && self.serverStreaming {
             return """
             let stream: any Connect.BidirectionalAsyncStreamInterface<\(inputName), \(outputName)> = self.client.bidirectionalStream(path: "\(self.methodPath)", headers: [:])
-            var request = \(inputName)()
-            populator?(&request)
-            try stream.send(request)
-            let asyncStream = AsyncThrowingStream<\(outputName), Error> { continuation in
-                continuation.onTermination = { _ in
-                    stream.cancel()
-                }
-                Task {
-                    for await result in stream.results() {
-                        switch result {
-                        case .message(let message):
-                            continuation.yield(message)
-                        case .headers:
-                            break
-                        case let .complete(_, error, _):
-                            if let error {
-                                continuation.finish(throwing: error)
-                            } else {
-                                continuation.finish()
-                            }
-                        }
-                    }
-                }
-            }
-            return asyncStream
+            return stream
             """
         } else if self.serverStreaming {
             return """
